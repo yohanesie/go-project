@@ -1,0 +1,79 @@
+# ================================================================
+# RBAC untuk Tekton Pipeline Service Account
+# ================================================================
+
+# ClusterRole: permissions yang dibutuhkan pipeline
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: tekton-pipeline-role
+rules:
+  # Tekton resources
+  - apiGroups: ["tekton.dev"]
+    resources:
+      - tasks
+      - taskruns
+      - pipelines
+      - pipelineruns
+      - pipelineresources
+      - runs
+      - stepactions
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # Core resources: pods, services, configmaps, secrets
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/log
+      - services
+      - configmaps
+      - secrets
+      - serviceaccounts
+      - namespaces
+      - persistentvolumeclaims
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # Deployments, ReplicaSets
+  - apiGroups: ["apps"]
+    resources:
+      - deployments
+      - replicasets
+      - statefulsets
+    verbs: ["get", "list", "watch", "create", "update", "patch", "delete"]
+
+  # Events
+  - apiGroups: [""]
+    resources: ["events"]
+    verbs: ["get", "list", "watch", "create", "patch"]
+
+---
+# ClusterRoleBinding: bind tekton-sa ke ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: tekton-pipeline-rolebinding
+subjects:
+  - kind: ServiceAccount
+    name: tekton-sa
+    namespace: tekton-pipelines
+roleRef:
+  kind: ClusterRole
+  name: tekton-pipeline-role
+  apiGroup: rbac.authorization.k8s.io
+
+---
+# RoleBinding di namespace "dev" agar pipeline bisa deploy ke sana
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: tekton-sa-dev-deployer
+  namespace: dev
+subjects:
+  - kind: ServiceAccount
+    name: tekton-sa
+    namespace: tekton-pipelines
+roleRef:
+  kind: ClusterRole
+  name: tekton-pipeline-role
+  apiGroup: rbac.authorization.k8s.io

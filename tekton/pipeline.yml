@@ -1,0 +1,105 @@
+apiVersion: tekton.dev/v1
+kind: Pipeline
+metadata:
+  name: cicd-pipeline
+  namespace: tekton-pipelines
+spec:
+  description: |
+    CI/CD Pipeline untuk Go Backend + Vue Frontend.
+    Flow: clone → test (parallel) → build+push (parallel) → deploy
+
+  params:
+    - name: repo-url
+      type: string
+      description: URL Git repository
+      default: https://github.com/yohanesie/go-project.git
+    - name: revision
+      type: string
+      description: Branch atau tag yang akan di-build
+      default: main
+    - name: image-tag
+      type: string
+      description: "Tag untuk Docker image (contoh: v1.0.0, latest, commit-sha)"
+      default: latest
+
+  workspaces:
+    - name: shared-workspace
+      description: Workspace bersama antar tasks (source code)
+
+  tasks:
+    # ── Step 1: Clone repository ─────────────────────────────────
+    - name: clone-repo
+      taskRef:
+        name: git-clone-simple
+      params:
+        - name: url
+          value: $(params.repo-url)
+        - name: revision
+          value: $(params.revision)
+      workspaces:
+        - name: output
+          workspace: shared-workspace
+
+    # ── Step 2a: Unit test backend (paralel dengan frontend) ──────
+    - name: test-backend
+      taskRef:
+        name: test-backend
+      runAfter:
+        - clone-repo
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    # ── Step 2b: Unit test frontend (paralel dengan backend) ──────
+    - name: test-frontend
+      taskRef:
+        name: test-frontend
+      runAfter:
+        - clone-repo
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    # ── Step 3a: Build & push backend image (paralel) ─────────────
+    - name: build-push-backend
+      taskRef:
+        name: build-push-backend
+      runAfter:
+        - test-backend
+        - test-frontend
+      params:
+        - name: image-name
+          value: yohanesie86/go-backend:$(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    # ── Step 3b: Build & push frontend image (paralel) ────────────
+    - name: build-push-frontend
+      taskRef:
+        name: build-push-frontend
+      runAfter:
+        - test-backend
+        - test-frontend
+      params:
+        - name: image-name
+          value: yohanesie86/go-frontend:$(params.image-tag)
+      workspaces:
+        - name: source
+          workspace: shared-workspace
+
+    # ── Step 4: Deploy ke Kubernetes namespace dev ────────────────
+    - name: deploy
+      taskRef:
+        name: deploy-to-kubernetes
+      runAfter:
+        - build-push-backend
+        - build-push-frontend
+      params:
+        - name: image-tag
+          value: $(params.image-tag)
+        - name: namespace
+          value: dev
+      workspaces:
+        - name: source
+          workspace: shared-workspace

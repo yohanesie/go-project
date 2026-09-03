@@ -1,0 +1,35 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: build-push-backend
+  namespace: tekton-pipelines
+spec:
+  description: Build Go backend Docker image and push to Docker Hub using Kaniko
+  params:
+    - name: image-name
+      type: string
+      description: Full image name with tag
+      default: yohanesie86/go-backend:latest
+  workspaces:
+    - name: source
+      description: Source code workspace
+  volumes:
+    - name: docker-credentials
+      secret:
+        secretName: dockerhub-secret
+        items:
+          - key: .dockerconfigjson
+            path: config.json
+  steps:
+    - name: build-and-push
+      image: gcr.io/kaniko-project/executor:latest
+      args:
+        - --dockerfile=$(workspaces.source.path)/Dockerfile
+        - --context=dir://$(workspaces.source.path)
+        - --destination=$(params.image-name)
+        - --cache=true
+        - --cache-ttl=24h
+        - --verbosity=info
+      volumeMounts:
+        - name: docker-credentials
+          mountPath: /kaniko/.docker

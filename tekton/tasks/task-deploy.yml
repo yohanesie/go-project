@@ -1,0 +1,44 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: deploy-to-kubernetes
+  namespace: tekton-pipelines
+spec:
+  description: Deploy backend and frontend images to Kubernetes namespace dev
+  params:
+    - name: image-tag
+      type: string
+      description: Docker image tag to deploy
+      default: latest
+    - name: namespace
+      type: string
+      description: Target Kubernetes namespace
+      default: dev
+  workspaces:
+    - name: source
+      description: Source code workspace (contains k8s manifests)
+  steps:
+    - name: deploy
+      image: bitnami/kubectl:latest
+      workingDir: $(workspaces.source.path)
+      env:
+        - name: IMAGE_TAG
+          value: $(params.image-tag)
+        - name: NAMESPACE
+          value: $(params.namespace)
+      command: ["/bin/bash", "-c"]
+      args:
+        - |
+          set -e
+          echo "=== Deploying to namespace: $NAMESPACE with tag: $IMAGE_TAG ==="
+          kubectl apply -f k8s/ -n $NAMESPACE
+          echo "--- Updating backend image ---"
+          kubectl set image deployment/go-backend go-backend=yohanesie86/go-backend:$IMAGE_TAG -n $NAMESPACE
+          echo "--- Updating frontend image ---"
+          kubectl set image deployment/go-frontend go-frontend=yohanesie86/go-frontend:$IMAGE_TAG -n $NAMESPACE
+          echo "--- Waiting for backend rollout ---"
+          kubectl rollout status deployment/go-backend -n $NAMESPACE --timeout=120s
+          echo "--- Waiting for frontend rollout ---"
+          kubectl rollout status deployment/go-frontend -n $NAMESPACE --timeout=120s
+          echo "=== Deployment SUKSES! ==="
+          kubectl get pods,svc -n $NAMESPACE

@@ -1,0 +1,32 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: test-frontend
+  namespace: tekton-pipelines
+spec:
+  description: Run Vitest unit tests for the Vue frontend
+  workspaces:
+    - name: source
+      description: Source code workspace
+  steps:
+    - name: install-deps
+      image: node:22-alpine
+      workingDir: $(workspaces.source.path)/ui
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          set -e
+          echo "=== Installing frontend dependencies ==="
+          npm ci
+          echo "Dependencies installed!"
+
+    - name: run-tests
+      image: node:22-alpine
+      workingDir: $(workspaces.source.path)/ui
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          set -e
+          echo "=== Running Vitest unit tests ==="
+          npm test
+          echo "=== Frontend tests PASSED! ==="

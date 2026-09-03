@@ -1,0 +1,16 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: github-trigger-binding
+  namespace: tekton-pipelines
+spec:
+  params:
+    # Ambil URL repo dari event GitHub
+    - name: repo-url
+      value: $(body.repository.clone_url)
+    # Ambil branch name (contoh: refs/heads/main → main)
+    - name: revision
+      value: $(body.ref)
+    # Gunakan commit SHA pendek sebagai image tag
+    - name: image-tag
+      value: $(body.after)

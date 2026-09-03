@@ -1,0 +1,25 @@
+apiVersion: tekton.dev/v1
+kind: Task
+metadata:
+  name: test-backend
+  namespace: tekton-pipelines
+spec:
+  description: Run Go unit tests for the backend
+  workspaces:
+    - name: source
+      description: Source code workspace
+  steps:
+    - name: run-tests
+      image: golang:1.27-alpine
+      workingDir: $(workspaces.source.path)
+      command: ["/bin/sh", "-c"]
+      args:
+        - |
+          set -e
+          echo "=== Installing dependencies ==="
+          go mod download
+          echo "=== Running Go unit tests ==="
+          go test ./... -v -cover -coverprofile=coverage.out
+          echo "=== Test coverage summary ==="
+          go tool cover -func=coverage.out
+          echo "=== Backend tests PASSED! ==="

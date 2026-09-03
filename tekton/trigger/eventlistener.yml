@@ -1,0 +1,43 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: github-event-listener
+  namespace: tekton-pipelines
+spec:
+  serviceAccountName: tekton-sa
+  triggers:
+    - name: github-push-trigger
+      interceptors:
+        # Filter: hanya proses push event ke branch main
+        - ref:
+            name: "github"
+          params:
+            - name: "eventTypes"
+              value: ["push"]
+        - ref:
+            name: "cel"
+          params:
+            - name: "filter"
+              value: "body.ref == 'refs/heads/main'"
+      bindings:
+        - ref: github-trigger-binding
+      template:
+        ref: cicd-trigger-template
+
+---
+# ================================================================
+# CARA MENGGUNAKAN GITHUB WEBHOOK:
+#
+# 1. Dapatkan URL EventListener (setelah apply):
+#    kubectl get svc -n tekton-pipelines | grep el-github
+#
+# 2. Expose ke internet (gunakan ngrok untuk lokal):
+#    ngrok http <PORT>
+#
+# 3. Daftarkan di GitHub repo:
+#    Settings → Webhooks → Add webhook
+#    Payload URL: https://<ngrok-url>/
+#    Content type: application/json
+#    Events: Just the push event
+#    Secret: (opsional)
+# ================================================================

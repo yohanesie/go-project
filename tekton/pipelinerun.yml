@@ -1,0 +1,42 @@
+# ================================================================
+# PipelineRun - Trigger manual untuk menjalankan CI/CD pipeline
+# ================================================================
+# Cara pakai:
+#   kubectl apply -f tekton/pipelinerun.yml
+#
+# Monitor:
+#   tkn pipelinerun logs --last -f -n tekton-pipelines
+#
+# CATATAN: Ubah "repo-url" dengan URL GitHub repository kamu!
+# ================================================================
+
+apiVersion: tekton.dev/v1
+kind: PipelineRun
+metadata:
+  name: cicd-pipeline-run-001
+  namespace: tekton-pipelines
+  labels:
+    app: go-project
+    trigger: manual
+spec:
+  pipelineRef:
+    name: cicd-pipeline
+  taskRunTemplate:
+    serviceAccountName: tekton-sa
+
+  params:
+    - name: repo-url
+      value: https://github.com/yohanesie/go-project.git
+    - name: revision
+      value: main
+    - name: image-tag
+      value: latest
+
+  workspaces:
+    - name: shared-workspace
+      persistentVolumeClaim:
+        claimName: tekton-workspace-pvc
+
+  timeouts:
+    pipeline: 1h0m0s
+    tasks: 45m0s
