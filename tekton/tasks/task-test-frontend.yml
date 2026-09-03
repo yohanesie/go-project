@@ -18,7 +18,6 @@ spec:
           set -e
           echo "=== Installing frontend dependencies ==="
           npm install
-          npm ci
           echo "Dependencies installed!"
 
     - name: run-tests
