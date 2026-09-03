@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: go-backend-service
+  namespace: dev
+  labels:
+    app: go-backend
+spec:
+  type: ClusterIP
+  selector:
+    app: go-backend
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8888
+      targetPort: 8888
