@@ -36,9 +36,12 @@ spec:
           kubectl set image deployment/go-backend go-backend=yohanesie86/go-backend:$IMAGE_TAG -n $NAMESPACE
           echo "--- Updating frontend image ---"
           kubectl set image deployment/go-frontend go-frontend=yohanesie86/go-frontend:$IMAGE_TAG -n $NAMESPACE
+          echo "--- Restarting deployments to pull fresh image ---"
+          kubectl rollout restart deployment/go-backend -n $NAMESPACE
+          kubectl rollout restart deployment/go-frontend -n $NAMESPACE
           echo "--- Waiting for backend rollout ---"
-          kubectl rollout status deployment/go-backend -n $NAMESPACE --timeout=120s
+          kubectl rollout status deployment/go-backend -n $NAMESPACE --timeout=180s
           echo "--- Waiting for frontend rollout ---"
-          kubectl rollout status deployment/go-frontend -n $NAMESPACE --timeout=120s
+          kubectl rollout status deployment/go-frontend -n $NAMESPACE --timeout=180s
           echo "=== Deployment SUKSES! ==="
           kubectl get pods,svc -n $NAMESPACE
